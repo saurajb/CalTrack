@@ -5,18 +5,39 @@ class calorieTracker {
     this._todaysCalories = 0;
     this._meals = [];
     this._workouts = [];
-    this._initialize();
+    this._renderdata();
   }
 
+  //update the meals values
   addmeals(meals) {
     this._meals.push(meals);
     this._todaysCalories += meals.calories;
     this._renderdata();
   }
 
+  //update the workout values
   addworkouts(workout) {
     this._workouts.push(workout);
     this._todaysCalories -= workout.calories;
+    this._renderdata();
+  }
+
+  removemeal(mealid) {
+    const mealindex = this._meals.findIndex((meal) => meal.id == mealid);
+    const meal = this._meals[mealindex];
+    this._meals.splice(mealindex, 1);
+    this._todaysCalories -= meal.calories;
+    this._renderdata();
+  }
+
+  removeworkout(workoutid) {
+    const workoutindex = this._workouts.findIndex(
+      (workout) => workout.id == workoutid
+    );
+    const workout = this._workouts[workoutindex];
+    console.log(workoutindex);
+    this._workouts.splice(workoutindex, 1);
+    this._todaysCalories += workout.calories;
     this._renderdata();
   }
 
@@ -82,13 +103,9 @@ class calorieTracker {
     this.caloriesRemaining();
     this.updateProgressbar();
   }
-
-  _initialize() {
-    this._renderdata();
-  }
 }
 
-//Create Meals and Workouts
+//Create Meals ID and info
 class Meal {
   constructor(mealname, calories) {
     this.id = Math.random().toString(16).slice(2);
@@ -96,12 +113,70 @@ class Meal {
     this.calories = calories;
   }
 }
-
+//Create workout id and info
 class Workout {
   constructor(workoutname, calories) {
     this.id = Math.random().toString(16).slice(2);
     this.name = workoutname;
     this.calories = calories;
+  }
+}
+
+// adding the meals to the DOMlist
+class MealList {
+  constructor(meal, type) {
+    this.meal = meal.name;
+    this.calories = meal.calories;
+    this.type = type;
+
+    const mealItemsContainer = document.getElementById('meal-items');
+
+    const div = document.createElement('div');
+    div.classList.add('card', 'my-2');
+    div.setAttribute('data-id', meal.id);
+    div.innerHTML = `<div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <h4 class="mx-1">${this.meal}</h4>
+          <div class="fs-1 bg-primary text-white text-center rounded-2 px-2 px-sm-5">
+            ${this.calories}
+          </div>
+          <button class="delete btn btn-danger btn-sm mx-2">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>`;
+    mealItemsContainer.appendChild(div);
+  }
+}
+
+// adding the workouts to the DOMlist
+class WorkoutList {
+  constructor(workout, type) {
+    this.meal = workout.name;
+    this.calories = workout.calories;
+    this.type = type;
+
+    const workoutItemsContainer = document.getElementById('workout-items');
+
+    const div = document.createElement('div');
+    div.classList.add('card', 'my-2');
+    div.setAttribute('data-id', workout.id);
+    div.innerHTML = `
+                  <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                  <h4 class="mx-1">${this.meal}</h4>
+                  <div
+                    class="fs-1 bg-secondary text-white text-center rounded-2 px-2 px-sm-5"
+                  >
+                    ${this.calories}
+                  </div>
+                  <button class="delete btn btn-danger btn-sm mx-2">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+    `;
+    workoutItemsContainer.appendChild(div);
   }
 }
 
@@ -112,55 +187,88 @@ class App {
 
     document
       .getElementById('meal-form')
-      .addEventListener('submit', this.addnewmeal.bind(this));
+      .addEventListener('submit', this.addnewitem.bind(this, 'meal'));
 
     document
       .getElementById('workout-form')
-      .addEventListener('submit', this.addnewworkout.bind(this));
+      .addEventListener('submit', this.addnewitem.bind(this, 'workout'));
+
+    document
+      .getElementById('meal-items')
+      .addEventListener('click', this.removeitem.bind(this, 'meal'));
+
+    document
+      .getElementById('workout-items')
+      .addEventListener('click', this.removeitem.bind(this, 'workout'));
   }
 
-  addnewmeal(e) {
+  addnewitem(type, e) {
     e.preventDefault();
     const mealel = document.getElementById('meal-name');
     const calorieel = document.getElementById('meal-calories');
-
-    if (mealel.value === '' || calorieel === '') {
-      alert('please fill all fields');
-      return;
-    }
-
-    const meal = new Meal(mealel.value, +calorieel.value);
-
-    this.tracker.addmeals(meal);
-    mealel.value = '';
-    calorieel.value = '';
-
-    const collapseMeal = document.getElementById('collapse-meal');
-    const bsCollapse = new bootstrap.Collapse(collapseMeal, {
-      toggle: true,
-    });
-  }
-
-  addnewworkout(e) {
-    e.preventDefault();
     const workoutEl = document.getElementById('workout-name');
     const workoutCalEl = document.getElementById('workout-calories');
 
-    if (workoutEl.value === '' || workoutCalEl === '') {
-      alert('please fill all fields');
-      return;
+    //checking if fields of meals and workout is emppty
+    if (type === 'meal') {
+      if (mealel.value === '' || calorieel === '') {
+        alert('please fill all fields');
+        return;
+      }
     }
 
-    const workout = new Workout(workoutEl.value, +workoutCalEl.value);
+    if (type === 'workout') {
+      if (workoutEl.value === '' || workoutCalEl === '') {
+        alert('please fill all fields');
+        return;
+      }
+    }
 
-    this.tracker.addworkouts(workout);
-    workoutEl.value = '';
-    workoutCalEl.value = '';
+    //Adding the meals & clearing form fields
+    if (type === 'meal') {
+      const meal = new Meal(mealel.value, +calorieel.value);
+      this.tracker.addmeals(meal);
+      const mealdisplay = new MealList(meal, 'food');
 
-    const collapseWorkout = document.getElementById('collapse-workout');
-    const bsCollapse = new bootstrap.Collapse(collapseWorkout, {
-      toggle: true,
-    });
+      mealel.value = '';
+      calorieel.value = '';
+
+      //collapse fields after inputing data
+      const collapseMeal = document.getElementById('collapse-meal');
+      const malCollapse = new bootstrap.Collapse(collapseMeal, {
+        toggle: true,
+      });
+    }
+
+    if (type === 'workout') {
+      const workout = new Workout(workoutEl.value, +workoutCalEl.value);
+      this.tracker.addworkouts(workout);
+      const workoutdisplay = new WorkoutList(workout, 'food');
+
+      workoutEl.value = '';
+      workoutCalEl.value = '';
+
+      //collapse fields after inputing data
+      const collapseWorkout = document.getElementById('collapse-workout');
+      const wrkoutCollapse = new bootstrap.Collapse(collapseWorkout, {
+        toggle: true,
+      });
+    }
+  }
+
+  removeitem(type, e) {
+    if (
+      e.target.classList.contains('delete') ||
+      e.target.classList.contains('fa-xmark')
+    ) {
+      if (confirm('are you sure?')) {
+        const elementid = e.target.closest('.card').getAttribute('data-id');
+        type === 'meal'
+          ? this.tracker.removemeal(elementid)
+          : this.tracker.removeworkout(elementid);
+        e.target.closest('.card').remove();
+      }
+    }
   }
 }
 
