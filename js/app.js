@@ -95,6 +95,19 @@ class calorieTracker {
     progressbar.style.width = `${width}%`;
   }
 
+  resetcals() {
+    this._todaysCalories = 0;
+    this._meals = [];
+    this._workouts = [];
+    this._renderdata();
+  }
+
+  setlimit(calval) {
+    this._totalCalories = calval;
+    this.updatedailycalorie();
+    this._renderdata();
+  }
+
   _renderdata() {
     this.updatedailycalorie();
     this.dailycalorielost();
@@ -200,6 +213,30 @@ class App {
     document
       .getElementById('workout-items')
       .addEventListener('click', this.removeitem.bind(this, 'workout'));
+
+    document
+      .getElementById('filter-meals')
+      .addEventListener('keyup', this.filteritems.bind(this, 'meal'));
+
+    document
+      .getElementById('filter-workouts')
+      .addEventListener('keyup', this.filteritems.bind(this, 'workout'));
+
+    document
+      .getElementById('add-meal-button')
+      .addEventListener('click', this.focusformfield.bind(this, 'meal'));
+
+    document
+      .getElementById('add-workout-button')
+      .addEventListener('click', this.focusformfield.bind(this, 'workout'));
+
+    document
+      .getElementById('reset')
+      .addEventListener('click', this.resetui.bind(this));
+
+    document
+      .getElementById('limit-form')
+      .addEventListener('submit', this.setcalorielimit.bind(this));
   }
 
   addnewitem(type, e) {
@@ -256,6 +293,14 @@ class App {
     }
   }
 
+  focusformfield(type) {
+    if (type === 'meal') {
+      document.getElementById('meal-name').focus();
+    } else if (type === 'workout') {
+      document.getElementById('workout-name').focus();
+    }
+  }
+
   removeitem(type, e) {
     if (
       e.target.classList.contains('delete') ||
@@ -269,6 +314,48 @@ class App {
         e.target.closest('.card').remove();
       }
     }
+  }
+
+  filteritems(type, e) {
+    const filtertext = e.target.value.toLowerCase();
+    const item = document
+      .querySelectorAll(`#${type}-items .card`)
+      .forEach((card) => {
+        const cardtext3 =
+          card.firstElementChild.firstElementChild.firstElementChild
+            .textContent;
+
+        if (cardtext3.toLowerCase().indexOf(filtertext) !== -1) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+  }
+
+  setcalorielimit(e) {
+    e.preventDefault();
+
+    const calval = document.getElementById('limit');
+
+    if (calval.value === '') {
+      alert('please enter a calorie limit');
+    } else {
+      this.tracker.setlimit(+calval.value);
+      calval.value = '';
+    }
+
+    const modalEl = document.getElementById('limit-modal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    modal.hide();
+  }
+
+  resetui() {
+    this.tracker.resetcals();
+    document.getElementById('meal-items').innerHTML = '';
+    document.getElementById('workout-items').innerHTML = '';
+    document.getElementById('filter-meals').value = '';
+    document.getElementById('filter-workouts').value = '';
   }
 }
 
