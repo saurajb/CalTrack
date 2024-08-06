@@ -1,24 +1,38 @@
 //Create Calories Tracker/updater
 class calorieTracker {
   constructor() {
-    this._totalCalories = 2000;
-    this._todaysCalories = 0;
-    this._meals = [];
-    this._workouts = [];
+    this._totalCalories = Storage.GetCalorieLimit();
+    this._todaysCalories = Storage.GetDailyCalorie();
+    this._meals = Storage.GetMeal();
+    this._workouts = Storage.GetWorkout();
     this._renderdata();
+    this.renderlist();
+  }
+
+  renderlist() {
+    const mealItemsContainer = document.getElementById('meal-items');
+    const workoutItemsContainer = document.getElementById('workout-items');
+    mealItemsContainer.innerHTML = ''; // Clear existing meals
+    workoutItemsContainer.innerHTML = ''; // Clear existing workouts
+    this._meals.forEach((meal) => new MealList(meal));
+    this._workouts.forEach((workout) => new WorkoutList(workout));
   }
 
   //update the meals values
   addmeals(meals) {
-    this._meals.push(meals);
     this._todaysCalories += meals.calories;
+    this._meals.push(meals); // Update internal meals list
+    Storage.SetDailyCalorie(this._todaysCalories);
+    Storage.SetMeal(meals);
     this._renderdata();
   }
 
   //update the workout values
   addworkouts(workout) {
-    this._workouts.push(workout);
     this._todaysCalories -= workout.calories;
+    this._workouts.push(workout); // Update internal workouts list
+    Storage.SetDailyCalorie(this._todaysCalories);
+    Storage.SetWorkout(workout);
     this._renderdata();
   }
 
@@ -27,7 +41,9 @@ class calorieTracker {
     const meal = this._meals[mealindex];
     this._meals.splice(mealindex, 1);
     this._todaysCalories -= meal.calories;
+    Storage.SetDailyCalorie(this._todaysCalories);
     this._renderdata();
+    Storage.removemeal(mealid);
   }
 
   removeworkout(workoutid) {
@@ -38,7 +54,9 @@ class calorieTracker {
     console.log(workoutindex);
     this._workouts.splice(workoutindex, 1);
     this._todaysCalories += workout.calories;
+    Storage.SetDailyCalorie(this._todaysCalories);
     this._renderdata();
+    Storage.removeworkout(workoutid);
   }
 
   updatedailycalorie() {
@@ -100,10 +118,12 @@ class calorieTracker {
     this._meals = [];
     this._workouts = [];
     this._renderdata();
+    Storage.clearday();
   }
 
   setlimit(calval) {
     this._totalCalories = calval;
+    Storage.SetCalorieLimit(calval);
     this.updatedailycalorie();
     this._renderdata();
   }
@@ -193,11 +213,100 @@ class WorkoutList {
   }
 }
 
+class Storage {
+  static GetCalorieLimit(calolimit = 1000) {
+    let updatedcal;
+    if (localStorage.getItem('calorie-limit') === null) {
+      updatedcal = calolimit;
+    } else {
+      updatedcal = JSON.parse(localStorage.getItem('calorie-limit'));
+    }
+    return updatedcal;
+  }
+
+  static SetCalorieLimit(calval) {
+    JSON.stringify(localStorage.setItem('calorie-limit', calval));
+  }
+
+  static GetDailyCalorie(dailycal = 0) {
+    let updatedcal;
+    if (localStorage.getItem('daily-calorie') === null) {
+      updatedcal = dailycal;
+    } else {
+      updatedcal = JSON.parse(localStorage.getItem('daily-calorie'));
+    }
+    return updatedcal;
+  }
+
+  static SetDailyCalorie(calval) {
+    JSON.stringify(localStorage.setItem('daily-calorie', calval));
+  }
+
+  static GetMeal() {
+    let updatedcal;
+    if (localStorage.getItem('meals') === null) {
+      updatedcal = [];
+    } else {
+      updatedcal = JSON.parse(localStorage.getItem('meals'));
+    }
+    return updatedcal;
+  }
+
+  static SetMeal(calval) {
+    let existingmeals = Storage.GetMeal();
+    existingmeals.push(calval);
+    localStorage.setItem('meals', JSON.stringify(existingmeals));
+  }
+
+  static GetWorkout() {
+    let updatedcal;
+    if (localStorage.getItem('workouts') === null) {
+      updatedcal = [];
+    } else {
+      updatedcal = JSON.parse(localStorage.getItem('workouts'));
+    }
+    return updatedcal;
+  }
+
+  static SetWorkout(calval) {
+    let existingworkouts = Storage.GetWorkout();
+    existingworkouts.push(calval);
+    localStorage.setItem('workouts', JSON.stringify(existingworkouts));
+  }
+
+  static removemeal(id) {
+    let currentmeals = Storage.GetMeal();
+    currentmeals.forEach((meal, index) => {
+      if (meal.id === id) {
+        currentmeals.splice(index, 1);
+      }
+    });
+    localStorage.setItem('meals', JSON.stringify(currentmeals));
+  }
+
+  static removeworkout(id) {
+    let currentworkout = Storage.GetWorkout();
+    currentworkout.forEach((workout, index) => {
+      if (workout.id === id) {
+        currentworkout.splice(index, 1);
+      }
+    });
+    localStorage.setItem('workouts', JSON.stringify(currentworkout));
+  }
+
+  static clearday() {
+    localStorage.clear();
+  }
+}
+
 //app for final render
 class App {
   constructor() {
     this.tracker = new calorieTracker();
+    this.startEventlisteners();
+  }
 
+  startEventlisteners() {
     document
       .getElementById('meal-form')
       .addEventListener('submit', this.addnewitem.bind(this, 'meal'));
